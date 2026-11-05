@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="hi-Latn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIP Calculator</title>
+<meta name="description" content="Free SIP + step-up calculator: aapki SIP kitni banegi, aur goal ke liye kitni SIP chahiye. Education only.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:wght@500&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---- settings you may edit ---- */
+  /* Instagram handle and links are in the CONFIG block at the bottom of this file. */
+  :root {
+    --paper: #EFE7D4; --card: #FBF8F0; --ink: #1C1A17; --ink-2: #5B554C; --ink-3: #8C8476;
+    --line: rgba(28,26,23,0.14); --red: #C8281E; --invested: #1F6FB2; --gain: #C8281E;
+    --chip: #F3EAD3; --shadow: 0 10px 24px rgba(60,35,10,0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1E1C19; --card: #282521; --ink: #F1EADB; --ink-2: #C5BCAC; --ink-3: #958C7D;
+      --line: rgba(241,234,219,0.14); --red: #E0503F; --invested: #3D8FD6; --gain: #E0503F;
+      --chip: #34302A; --shadow: 0 10px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1E1C19; --card: #282521; --ink: #F1EADB; --ink-2: #C5BCAC; --ink-3: #958C7D;
+    --line: rgba(241,234,219,0.14); --red: #E0503F; --invested: #3D8FD6; --gain: #E0503F;
+    --chip: #34302A; --shadow: 0 10px 24px rgba(0,0,0,0.35);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.5 Inter, system-ui, sans-serif;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+  .kicker { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: 0.16em; color: var(--ink-3); text-transform: uppercase;
+            border-bottom: 1px solid var(--line); padding-bottom: 8px; display: flex; justify-content: space-between; }
+  h1 { font: 400 44px/1 Anton, Impact, sans-serif; text-transform: uppercase; margin: 14px 0 4px; letter-spacing: 0.01em; }
+  h1 span { color: var(--red); }
+  .sub { color: var(--ink-2); margin: 0 0 18px; }
+  .card { background: var(--card); border-radius: 6px; box-shadow: var(--shadow); padding: 18px 16px; margin-bottom: 16px; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--chip); padding: 4px; border-radius: 8px; margin-bottom: 16px; }
+  .tabs button { border: 0; background: transparent; color: var(--ink-2); font: 600 14px Inter, sans-serif; padding: 10px 6px; border-radius: 6px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  label { font-weight: 600; font-size: 15px; white-space: nowrap; }
+  .hint { font-size: 12px; color: var(--ink-3); }
+  .num { display: flex; align-items: center; gap: 4px; background: var(--chip); border-radius: 6px; padding: 4px 10px; min-width: 120px; justify-content: flex-end; }
+  .num input { width: 100%; border: 0; background: transparent; color: var(--ink); font: 700 17px Inter, sans-serif; text-align: right; outline: none; }
+  .num span { color: var(--ink-3); font-size: 14px; white-space: nowrap; }
+  input[type=range] { width: 100%; margin: 10px 0 0; accent-color: var(--red); height: 28px; }
+  .hero { text-align: left; }
+  .hero .lbl { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: 0.14em; color: var(--ink-3); text-transform: uppercase; }
+  .hero .big { font: 400 56px/1.05 Anton, Impact, sans-serif; color: var(--red); margin: 4px 0 2px; }
+  .hero .note { color: var(--ink-2); font-size: 14px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .stat { border-top: 2px solid var(--line); padding-top: 8px; }
+  .stat .v { font: 700 19px Inter, sans-serif; }
+  .stat .k { font-size: 12px; color: var(--ink-3); }
+  .legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2); margin: 4px 0 8px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+  .chart { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--paper); font-size: 12px; line-height: 1.4;
+         padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -110%); opacity: 0; transition: opacity .1s; }
+  .linkbtn { background: none; border: 0; color: var(--ink-2); text-decoration: underline; font: 14px Inter, sans-serif; cursor: pointer; padding: 8px 0 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th, td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--ink-3); font-weight: 600; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn { display: block; text-align: center; border: 0; border-radius: 6px; padding: 13px 10px; font: 700 15px Inter, sans-serif; cursor: pointer; text-decoration: none; }
+  .btn.primary { background: var(--red); color: #fff; }
+  .btn.ghost { background: var(--chip); color: var(--ink); }
+  .fine { font-size: 12px; color: var(--ink-3); margin-top: 18px; }
+  .fine b { color: var(--ink-2); }
+  @media (max-width: 380px) { h1 { font-size: 38px; } .hero .big { font-size: 46px; } .num { min-width: 104px; } }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="kicker"><span>Tara ka money desk</span><span>free tool</span></div>
+  <h1>SIP <span>calculator</span></h1>
+  <p class="sub">Aapki SIP kitni banegi? Aur goal ke liye kitni SIP chahiye? Numbers daalo, seedha dekho.</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-fv" aria-selected="true">Meri SIP kitni banegi?</button>
+    <button role="tab" id="tab-goal" aria-selected="false">Goal ke liye kitni SIP?</button>
+  </div>
+
+  <section class="card" id="inputs">
+    <div class="field" id="f-sip">
+      <div class="row"><label for="sip">Monthly SIP</label><div class="num"><span>₹</span><input id="sip" inputmode="numeric" value="5000"></div></div>
+      <input type="range" id="sip-r" min="500" max="100000" step="500" value="5000" aria-label="Monthly SIP">
+    </div>
+    <div class="field" id="f-goal" hidden>
+      <div class="row"><label for="goal">Goal amount</label><div class="num"><span>₹</span><input id="goal" inputmode="numeric" value="10000000"></div></div>
+      <input type="range" id="goal-r" min="100000" max="50000000" step="100000" value="10000000" aria-label="Goal amount">
+      <div class="hint" id="goal-words">₹1 crore</div>
+    </div>
+    <div class="field">
+      <div class="row"><label for="years">Kitne saal</label><div class="num"><input id="years" inputmode="numeric" value="20"><span>saal</span></div></div>
+      <input type="range" id="years-r" min="1" max="40" step="1" value="20" aria-label="Years">
+    </div>
+    <div class="field">
+      <div class="row"><div><label for="ret">Expected return</label><div class="hint">Andaaza hai, guarantee nahi</div></div><div class="num"><input id="ret" inputmode="decimal" value="12"><span>% / saal</span></div></div>
+      <input type="range" id="ret-r" min="1" max="20" step="0.5" value="12" aria-label="Expected return">
+    </div>
+    <div class="field">
+      <div class="row"><div><label for="step">Step-up</label><div class="hint">Har saal SIP kitni badhaoge</div></div><div class="num"><input id="step" inputmode="decimal" value="10"><span>% / saal</span></div></div>
+      <input type="range" id="step-r" min="0" max="25" step="1" value="10" aria-label="Yearly step-up">
+    </div>
+    <div class="field">
+      <div class="row"><div><label for="inf">Mehngaai</label><div class="hint">Aaj ke paise mein value dekhne ke liye</div></div><div class="num"><input id="inf" inputmode="decimal" value="6"><span>% / saal</span></div></div>
+      <input type="range" id="inf-r" min="0" max="12" step="0.5" value="6" aria-label="Inflation">
+    </div>
+  </section>
+
+  <section class="card hero" aria-live="polite">
+    <div class="lbl" id="hero-lbl">Aapki SIP banegi</div>
+    <div class="big" id="hero">—</div>
+    <div class="note" id="hero-note"></div>
+    <div class="stats">
+      <div class="stat"><div class="v" id="s-inv">—</div><div class="k">Aapne lagaya</div></div>
+      <div class="stat"><div class="v" id="s-gain">—</div><div class="k">Growth (andaaza)</div></div>
+      <div class="stat"><div class="v" id="s-real">—</div><div class="k">Aaj ke paise mein</div></div>
+      <div class="stat"><div class="v" id="s-last">—</div><div class="k">Aakhri saal ki SIP / mahina</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row"><label>Saal-dar-saal</label><span class="hint">Bar pe tap karo</span></div>
+    <div class="legend"><span><i style="background:var(--invested)"></i>Aapne lagaya</span><span><i style="background:var(--gain)"></i>Growth</span></div>
+    <div class="chart" id="chart"><svg id="svg" viewBox="0 0 360 230" role="img" aria-label="Year by year: amount invested and growth"></svg><div class="tip" id="tip"></div></div>
+    <button class="linkbtn" id="tbl-btn" aria-expanded="false">Table dikhao</button>
+    <div id="tbl" hidden></div>
+  </section>
+
+  <section class="actions">
+    <a class="btn primary" id="share" href="#">WhatsApp pe bhejo</a>
+    <a class="btn ghost" id="follow" href="#">Daily money Reels</a>
+  </section>
+
+  <p class="fine"><b>Education only, not investment advice.</b> Yeh ek andaaza hai: mutual fund returns guaranteed nahi
+    hote, market upar-neeche hota hai, aur past returns future ki guarantee nahi. Calculation monthly compounding pe hai,
+    SIP har mahine ki shuruaat mein. Koi bhi investment karne se pehle scheme documents padho ya SEBI-registered adviser
+    se baat karo.<br><br>Tara ek AI creator hai. Is page pe aapka koi data save ya bheja nahi jaata.</p>
+</main>
+
+<script>
+/* ---- CONFIG: edit these ---- */
+const CONFIG = {
+  instagram: "https://www.instagram.com/decodemoneywithtara/",   // Tara's Instagram profile link
+  shareText: "Dekho meri SIP kitni banegi: free SIP calculator",
+};
+
+const $ = (id) => document.getElementById(id);
+let mode = "fv";
+
+function inr(x) {
+  if (!isFinite(x)) return "—";
+  const a = Math.abs(x);
+  if (a >= 1e7) return "₹" + (x / 1e7).toFixed(a >= 1e9 ? 0 : 2).replace(/\.00$/, "") + " Cr";
+  if (a >= 1e5) return "₹" + (x / 1e5).toFixed(2).replace(/\.00$/, "") + " L";
+  return "₹" + Math.round(x).toLocaleString("en-IN");
+}
+function inrFull(x) { return "₹" + Math.round(x).toLocaleString("en-IN"); }
+function num(id, lo, hi) {
+  const v = parseFloat(String($(id).value).replace(/[^0-9.]/g, ""));
+  return Math.min(hi, Math.max(lo, isFinite(v) ? v : lo));
+}
+
+/* SIP paid at the start of each month, monthly compounding at r/12; SIP rises by `step` every 12 months. */
+function simulate(sip, years, ret, step) {
+  const r = ret / 100 / 12;
+  let value = 0, invested = 0, p = sip;
+  const rows = [];
+  for (let m = 1; m <= years * 12; m++) {
+    if (m > 1 && (m - 1) % 12 === 0) p *= 1 + step / 100;
+    value = (value + p) * (1 + r);
+    invested += p;
+    if (m % 12 === 0) rows.push({ year: m / 12, invested, value, sip: p });
+  }
+  return { rows, value, invested, lastSip: p };
+}
+
+function draw(rows) {
+  const svg = $("svg"), W = 360, H = 230, L = 44, R = 6, T = 14, B = 24;
+  const max = Math.max(...rows.map((d) => d.value)) || 1;
+  const pw = (W - L - R) / rows.length, bw = Math.max(3, pw - 2);
+  const y = (v) => T + (H - T - B) * (1 - v / max);
+  const css = getComputedStyle(document.documentElement);
+  const ink3 = css.getPropertyValue("--ink-3"), line = css.getPropertyValue("--line");
+  let g = "";
+  for (let k = 0; k <= 4; k++) {
+    const v = (max * k) / 4, yy = y(v);
+    g += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="${line}" stroke-width="1"/>`;
+    g += `<text x="${L - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="${ink3}">${k ? inr(v).replace("₹", "") : "0"}</text>`;
+  }
+  rows.forEach((d, i) => {
+    const x = L + i * pw + (pw - bw) / 2;
+    const yi = y(d.invested), yv = y(d.value), base = y(0);
+    const rad = Math.min(4, bw / 2);
+    g += `<g class="bar" data-i="${i}">`;
+    g += `<rect x="${x}" y="${yi}" width="${bw}" height="${Math.max(0, base - yi)}" fill="var(--invested)"/>`;
+    if (base - yi > 0 && yi - yv > 2) {
+      g += `<path d="M${x} ${yi - 2} V${yv + rad} q0 -${rad} ${rad} -${rad} h${bw - 2 * rad} q${rad} 0 ${rad} ${rad} V${yi - 2} Z" fill="var(--gain)"/>`;
+    }
+    g += `<rect x="${L + i * pw}" y="${T}" width="${pw}" height="${H - T - B}" fill="transparent"/></g>`;
+    const every = rows.length > 20 ? 5 : rows.length > 10 ? 2 : 1;
+    if ((i + 1) % every === 0 || i === 0) g += `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="${ink3}">${d.year}</text>`;
+  });
+  const last = rows[rows.length - 1];
+  g += `<text x="${W - R}" y="${Math.max(12, y(last.value) - 6)}" text-anchor="end" font-size="12" font-weight="700" fill="var(--ink)">${inr(last.value)}</text>`;
+  svg.innerHTML = g;
+  const tip = $("tip");
+  svg.querySelectorAll(".bar").forEach((b) => {
+    const show = () => {
+      const d = rows[+b.dataset.i];
+      const box = svg.getBoundingClientRect(), s = box.width / W;
+      const x = (L + (+b.dataset.i + 0.5) * pw) * s;
+      tip.innerHTML = `<b>Saal ${d.year}</b><br>Value ${inr(d.value)}<br>Lagaya ${inr(d.invested)}<br>Growth ${inr(d.value - d.invested)}`;
+      tip.style.left = Math.min(box.width - 70, Math.max(70, x)) + "px";
+      tip.style.top = y(d.value) * s + "px";
+      tip.style.opacity = 1;
+    };
+    b.addEventListener("mouseenter", show);
+    b.addEventListener("click", show);
+    b.addEventListener("mouseleave", () => (tip.style.opacity = 0));
+  });
+  $("tbl").innerHTML = `<table><thead><tr><th>Saal</th><th>SIP / mahina</th><th>Lagaya</th><th>Value</th></tr></thead><tbody>` +
+    rows.map((d) => `<tr><td>${d.year}</td><td>${inrFull(d.sip)}</td><td>${inr(d.invested)}</td><td>${inr(d.value)}</td></tr>`).join("") +
+    `</tbody></table>`;
+}
+
+function update() {
+  const years = Math.round(num("years", 1, 40)), ret = num("ret", 0, 30), step = num("step", 0, 50), inf = num("inf", 0, 20);
+  let sim, sip;
+  if (mode === "fv") {
+    sip = num("sip", 100, 1e7);
+    sim = simulate(sip, years, ret, step);
+    $("hero-lbl").textContent = `${years} saal mein aapki SIP banegi (andaaza)`;
+    $("hero").textContent = inr(sim.value);
+    $("hero-note").textContent = `${inrFull(sip)}/mahina se shuru, har saal ${step}% badhakar, ${ret}% return maan ke.`;
+  } else {
+    const goal = num("goal", 1e4, 1e10);
+    const unit = simulate(1, years, ret, step).value;
+    sip = Math.ceil(goal / unit / 10) * 10;
+    sim = simulate(sip, years, ret, step);
+    $("goal-words").textContent = inr(goal);
+    $("hero-lbl").textContent = `${inr(goal)} ke liye shuruaati SIP chahiye`;
+    $("hero").textContent = inrFull(sip) + "/mahina";
+    $("hero-note").textContent = `Har saal ${step}% badhakar, ${years} saal, ${ret}% return maan ke.`;
+  }
+  $("s-inv").textContent = inr(sim.invested);
+  $("s-gain").textContent = inr(sim.value - sim.invested);
+  $("s-real").textContent = inr(sim.value / Math.pow(1 + inf / 100, years));
+  $("s-last").textContent = inrFull(sim.lastSip);
+  draw(sim.rows);
+  try { localStorage.setItem("sipcalc", JSON.stringify({ mode, sip: $("sip").value, goal: $("goal").value, years, ret, step, inf })); } catch (e) {}
+}
+
+function link(id) {
+  const box = $(id), range = $(id + "-r");
+  box.addEventListener("input", () => { range.value = num(id, +range.min, +range.max); update(); });
+  range.addEventListener("input", () => { box.value = range.value; update(); });
+}
+["sip", "goal", "years", "ret", "step", "inf"].forEach(link);
+
+function setMode(m) {
+  mode = m;
+  $("tab-fv").setAttribute("aria-selected", m === "fv");
+  $("tab-goal").setAttribute("aria-selected", m === "goal");
+  $("f-sip").hidden = m !== "fv";
+  $("f-goal").hidden = m !== "goal";
+  update();
+}
+$("tab-fv").onclick = () => setMode("fv");
+$("tab-goal").onclick = () => setMode("goal");
+$("tbl-btn").onclick = () => {
+  const open = $("tbl").hidden;
+  $("tbl").hidden = !open;
+  $("tbl-btn").setAttribute("aria-expanded", open);
+  $("tbl-btn").textContent = open ? "Table chhupao" : "Table dikhao";
+};
+$("share").href = "https://wa.me/?text=" + encodeURIComponent(CONFIG.shareText + " " + location.href);
+$("follow").href = CONFIG.instagram;
+
+try {
+  const s = JSON.parse(localStorage.getItem("sipcalc") || "null");
+  if (s) {
+    ["sip", "goal", "years", "ret", "step", "inf"].forEach((k) => { if (s[k] != null) { $(k).value = s[k]; $(k + "-r").value = s[k]; } });
+    mode = s.mode || "fv";
+  }
+} catch (e) {}
+setMode(mode);
+window.addEventListener("resize", update);
+</script>
+</body>
+</html>
