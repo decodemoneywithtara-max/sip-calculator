@@ -1,11 +1,14 @@
 // Tara's comment-to-DM bot (our own ManyChat), the shared logic. Used by netlify/functions/ig-webhook.mjs and
-// ig-token-refresh.mjs. Instagram API with Instagram Login, Standard Access, Tara's own account only.
+// ig-token-refresh.mjs. Meta app "Tara Replies" (Instagram API, Unified login), Standard Access, Tara's own account only.
 // A comment holding a keyword from bot/keywords.mjs gets one private-reply DM and a short public reply.
-// Netlify env: IG_ACCESS_TOKEN, IG_APP_SECRET (comma-separated if more than one), IG_VERIFY_TOKEN; optional IG_API_VERSION.
+// Netlify env: IG_ACCESS_TOKEN, IG_APP_SECRET (comma-separated if more than one), IG_VERIFY_TOKEN, IG_APP_ID (token
+// renewal); optional IG_API_VERSION. Unified login gives a Facebook-style token (EAA...): it is used on graph.facebook.com;
+// an Instagram-login token (IG...) on graph.instagram.com.
 import { createHmac, timingSafeEqual, createHash } from "node:crypto";
 import KEYWORDS from "./keywords.mjs";
 
-const API = () => `https://graph.instagram.com/${process.env.IG_API_VERSION || "v24.0"}`;
+export const apiHost = (token) => (String(token).startsWith("IG") ? "graph.instagram.com" : "graph.facebook.com");
+const API = (token) => `https://${apiHost(token)}/${process.env.IG_API_VERSION || "v24.0"}`;
 const DAY = 24 * 3600 * 1000;
 
 // ---- storage: Netlify Blobs on Netlify, memory when run locally (tests) ----
@@ -79,9 +82,9 @@ export function findKeyword(text) {
 }
 
 async function call(path, body, token) {
-  const r = await fetch(`${API()}${path}`, {
+  const r = await fetch(`${API(token)}${path}?access_token=${encodeURIComponent(token)}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const j = await r.json().catch(() => ({}));

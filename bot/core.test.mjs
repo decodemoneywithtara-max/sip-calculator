@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 
-process.env.IG_ACCESS_TOKEN = "tok";
+process.env.IG_ACCESS_TOKEN = "EAAtok";
 process.env.IG_APP_SECRET = "wrong-secret, sekret";
 process.env.IG_VERIFY_TOKEN = "vt";
 
@@ -12,7 +12,8 @@ const handler = (await import("../netlify/functions/ig-webhook.mjs")).default;
 
 const calls = [];
 globalThis.fetch = async (url, opt) => {
-  calls.push({ url: String(url), body: opt?.body ? JSON.parse(opt.body) : null, auth: opt?.headers?.Authorization });
+  const u = new URL(String(url));
+  calls.push({ url: u.origin + u.pathname, host: u.host, token: u.searchParams.get("access_token"), body: opt?.body ? JSON.parse(opt.body) : null });
   return new Response("{}", { status: 200 });
 };
 
@@ -36,7 +37,8 @@ test("a keyword comment gets one DM and one public reply; repeats are skipped", 
   assert.deepEqual(calls[0].body.recipient, { comment_id: "c1" });
   assert.match(calls[0].body.message.text, /tara-sip-calculator\.netlify\.app/);
   assert.match(calls[0].body.message.text, /Education only, not investment advice\./);
-  assert.equal(calls[0].auth, "Bearer tok");
+  assert.equal(calls[0].token, "EAAtok");
+  assert.equal(calls[0].host, "graph.facebook.com");
   assert.match(calls[1].url, /\/c1\/replies$/);
 
   assert.equal((await handleComment("me1", v, 2_000)).skip, "already answered");
@@ -101,4 +103,20 @@ test("cleanup deletes records older than 30 days and keeps newer ones", async ()
   assert.equal(await db.get("done/old"), null);
   assert.notEqual(await db.get("user/new/SIP"), null);
   assert.notEqual(await db.get("token"), null);
+});
+
+test("token kind picks the API host", async () => {
+  const { apiHost } = await import("./core.mjs");
+  assert.equal(apiHost("EAAxyz"), "graph.facebook.com");
+  assert.equal(apiHost("IGQWxyz"), "graph.instagram.com");
+});
+
+test("token renewal URL: Facebook token needs the app id + secret; Instagram token doesn't", async () => {
+  const { renewUrl } = await import("../netlify/functions/ig-token-refresh.mjs");
+  assert.equal(renewUrl("EAAx", {}), null);
+  const fb = new URL(renewUrl("EAAx", { IG_APP_ID: "123", IG_APP_SECRET: "s1, s2" }));
+  assert.equal(fb.host, "graph.facebook.com");
+  assert.equal(fb.searchParams.get("grant_type"), "fb_exchange_token");
+  assert.equal(fb.searchParams.get("client_secret"), "s1");
+  assert.equal(new URL(renewUrl("IGQx", {})).searchParams.get("grant_type"), "ig_refresh_token");
 });
