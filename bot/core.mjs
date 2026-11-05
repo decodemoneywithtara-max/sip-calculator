@@ -7,8 +7,13 @@
 import { createHmac, timingSafeEqual, createHash } from "node:crypto";
 import KEYWORDS from "./keywords.mjs";
 
+// Netlify Functions can expose variables through Netlify.env (always) and process.env; read both.
+export const env = (k) => {
+  try { const v = globalThis.Netlify?.env?.get(k); if (v) return v; } catch (e) {}
+  return process.env[k] || "";
+};
 export const apiHost = (token) => (String(token).startsWith("IG") ? "graph.instagram.com" : "graph.facebook.com");
-const API = (token) => `https://${apiHost(token)}/${process.env.IG_API_VERSION || "v24.0"}`;
+const API = (token) => `https://${apiHost(token)}/${env("IG_API_VERSION") || "v24.0"}`;
 const DAY = 24 * 3600 * 1000;
 
 // ---- storage: Netlify Blobs on Netlify, memory when run locally (tests) ----
@@ -51,16 +56,16 @@ const sha = (s) => createHash("sha256").update(s || "").digest("hex").slice(0, 1
 
 // The token: the env value, unless the weekly refresh stored a newer one for that same env value.
 export async function accessToken() {
-  const env = process.env.IG_ACCESS_TOKEN || "";
+  const fromEnv = env("IG_ACCESS_TOKEN");
   try {
     const saved = await (await store()).get("token", { type: "json" });
-    if (saved?.token && saved.from_env === sha(env)) return saved.token;
+    if (saved?.token && saved.from_env === sha(fromEnv)) return saved.token;
   } catch (e) {}
-  return env;
+  return fromEnv;
 }
 
 export function signatureOk(raw, header) {
-  const secrets = (process.env.IG_APP_SECRET || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const secrets = (env("IG_APP_SECRET") || "").split(",").map((s) => s.trim()).filter(Boolean);
   if (!secrets.length || !header?.startsWith("sha256=")) return false;
   const got = Buffer.from(header.slice(7), "hex");
   return secrets.some((s) => {

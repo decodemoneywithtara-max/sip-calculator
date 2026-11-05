@@ -1,20 +1,20 @@
 // Tara's comment-to-DM bot: the webhook. The logic is in bot/core.mjs, the keywords in bot/keywords.mjs.
 // GET  /ig/webhook  Meta's verification handshake (hub.challenge), or a health check without secrets.
 // POST /ig/webhook  "comments" events -> bot/core.mjs handleComment.
-import { accessToken, signatureOk, handleComment, KEYWORDS } from "../../bot/core.mjs";
+import { accessToken, signatureOk, handleComment, KEYWORDS, env } from "../../bot/core.mjs";
 
 export default async (req) => {
   const url = new URL(req.url);
   if (req.method === "GET") {
     if (url.searchParams.get("hub.mode") === "subscribe") {
-      const ok = process.env.IG_VERIFY_TOKEN && url.searchParams.get("hub.verify_token") === process.env.IG_VERIFY_TOKEN;
+      const ok = env("IG_VERIFY_TOKEN") && url.searchParams.get("hub.verify_token") === env("IG_VERIFY_TOKEN");
       return ok ? new Response(url.searchParams.get("hub.challenge") || "") : new Response("bad verify token", { status: 403 });
     }
     return Response.json({
       ok: true,
       token_set: Boolean(await accessToken()),
-      secret_set: Boolean(process.env.IG_APP_SECRET),
-      verify_set: Boolean(process.env.IG_VERIFY_TOKEN),
+      secret_set: Boolean(env("IG_APP_SECRET")),
+      verify_set: Boolean(env("IG_VERIFY_TOKEN")),
       keywords: Object.keys(KEYWORDS).filter((k) => !k.startsWith("_")),
     });
   }
