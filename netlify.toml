@@ -1,0 +1,7 @@
+# Tara's site: the SIP calculator (index.html), the privacy pages Meta needs, and the comment-to-DM bot.
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"

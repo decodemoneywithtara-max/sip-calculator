@@ -1,0 +1,8 @@
+{
+  "name": "tara-site",
+  "private": true,
+  "type": "module",
+  "description": "Decode Money with Tara: SIP calculator + Instagram comment-to-DM bot (Netlify)",
+  "scripts": { "test": "node --test bot/core.test.mjs" },
+  "dependencies": { "@netlify/blobs": "^8.1.0" }
+}
